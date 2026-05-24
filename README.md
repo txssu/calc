@@ -1,3 +1,8 @@
+<!--
+SPDX-FileCopyrightText: 2026 Eugene Fisher <z.ribin20@gmail.com>
+SPDX-License-Identifier: AGPL-3.0-or-later
+-->
+
 # Calc
 
 A minimal calculator with subscription plans, deployed to
@@ -32,3 +37,12 @@ configured via the `CNAME` file at the repository root.
 2. Add a DNS `CNAME` record pointing `calc.txssu.dev` to `<owner>.github.io`.
 3. After the certificate is provisioned, enable **Enforce HTTPS** in
    **Settings → Pages**.
+
+## License
+
+Licensed under [AGPL-3.0-or-later](LICENSES/AGPL-3.0-or-later.txt).
+
+The repository is [REUSE](https://reuse.software/) compliant: every file
+declares its copyright and license either inline (via `SPDX-FileCopyrightText`
+and `SPDX-License-Identifier` headers) or through `REUSE.toml`. Compliance
+is verified on every push by `.github/workflows/reuse.yml`.
