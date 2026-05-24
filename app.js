@@ -126,17 +126,11 @@
     state.justEvaluated = false;
   };
 
-  const scramble = (s) =>
-    s.replace(/\d/g, (d) => {
-      const shift = 1 + Math.floor(Math.random() * 9);
-      return String((Number(d) + shift) % 10);
-    });
+  const LOCKED = "•••";
 
   const equals = () => {
     if (state.previous === null || state.operator === null) return;
-    const b = parseFloat(state.current);
-    const result = compute(state.previous, b, state.operator);
-    state.current = scramble(format(result));
+    state.current = LOCKED;
     state.previous = null;
     state.operator = null;
     state.overwrite = false;
@@ -144,22 +138,12 @@
   };
 
   /* -------- Paywall -------- */
-  let lastFocus = null;
-
   const openPaywall = () => {
-    lastFocus = document.activeElement;
+    if (!paywall.classList.contains("hidden")) return;
     paywall.classList.remove("hidden");
     document.body.style.overflow = "hidden";
     const firstCta = paywall.querySelector("[data-plan]");
     if (firstCta) firstCta.focus({ preventScroll: true });
-  };
-
-  const closePaywall = () => {
-    paywall.classList.add("hidden");
-    document.body.style.overflow = "";
-    if (lastFocus && typeof lastFocus.focus === "function") {
-      lastFocus.focus({ preventScroll: true });
-    }
   };
 
   const toast = (text) => {
@@ -200,7 +184,7 @@
         case "equals":
           equals();
           render();
-          setTimeout(openPaywall, 320);
+          openPaywall();
           return;
       }
     }
@@ -208,24 +192,13 @@
   });
 
   paywall.addEventListener("click", (e) => {
-    const target = e.target.closest("[data-action='close-paywall'], [data-plan]");
+    const target = e.target.closest("[data-plan]");
     if (!target) return;
-
-    if (target.dataset.plan) {
-      closePaywall();
-      toast("Checkout is not available in this preview.");
-      return;
-    }
-    closePaywall();
+    toast("Payment processor is temporarily unavailable.");
   });
 
   document.addEventListener("keydown", (e) => {
-    const paywallOpen = !paywall.classList.contains("hidden");
-
-    if (paywallOpen) {
-      if (e.key === "Escape") closePaywall();
-      return;
-    }
+    if (!paywall.classList.contains("hidden")) return;
 
     if (/^[0-9]$/.test(e.key)) {
       inputDigit(e.key);
@@ -240,7 +213,7 @@
       e.preventDefault();
       equals();
       render();
-      setTimeout(openPaywall, 320);
+      openPaywall();
     } else if (e.key === "Backspace") {
       if (state.overwrite || state.justEvaluated) {
         clearAll();

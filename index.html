@@ -163,10 +163,7 @@
       aria-modal="true"
       aria-labelledby="paywall-title"
     >
-      <div
-        class="absolute inset-0 bg-black/70 backdrop-blur-md"
-        data-action="close-paywall"
-      ></div>
+      <div class="absolute inset-0 bg-black/80 backdrop-blur-md"></div>
 
       <article
         class="relative w-full max-w-3xl max-h-[calc(100vh-2rem)] overflow-y-auto
@@ -174,32 +171,20 @@
                p-8 sm:p-10 shadow-monolith
                animate-[card-in_300ms_cubic-bezier(0.2,0.7,0.2,1)_forwards]"
       >
-        <button
-          class="absolute top-4 right-4 w-8 h-8 rounded-full
-                 border border-zinc-800 text-zinc-500 text-lg leading-none
-                 hover:text-zinc-100 hover:border-zinc-700 transition-colors"
-          type="button"
-          data-action="close-paywall"
-          aria-label="Close"
-        >
-          ×
-        </button>
-
         <header class="text-center max-w-xl mx-auto mb-8">
           <span
             class="inline-block px-2.5 py-1 mb-4 rounded-full
                    bg-accent-soft border border-accent/30
                    text-[10px] uppercase tracking-[0.14em] text-accent-strong font-mono"
-          >Upgrade required</span>
+          >Subscription required</span>
           <h2
             id="paywall-title"
             class="text-3xl sm:text-4xl font-semibold tracking-tight text-zinc-100 mb-3"
           >
-            Continue with a subscription
+            Subscribe to view your result
           </h2>
           <p class="text-zinc-400 text-sm sm:text-base leading-relaxed">
-            You've reached the limit of the free plan. Choose a subscription
-            to keep using Calc.
+            Calc requires an active subscription. Choose a plan to continue.
           </p>
         </header>
 
@@ -306,15 +291,6 @@
           </article>
         </div>
 
-        <footer class="mt-8 pt-5 border-t border-zinc-800 flex items-center justify-center">
-          <button
-            type="button"
-            data-action="close-paywall"
-            class="text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
-          >
-            Continue with free plan
-          </button>
-        </footer>
       </article>
     </div>
 
