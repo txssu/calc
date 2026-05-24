@@ -31,6 +31,11 @@ export const MemoryBar = ({
     onRecall(v);
   };
 
+  const handleStore = () => {
+    memory.store(currentNumber);
+    onAfterAction?.(t("memory.toast.stored"));
+  };
+
   const handleClear = () => {
     memory.clear();
     onAfterAction?.(t("memory.toast.cleared"));
@@ -70,18 +75,11 @@ export const MemoryBar = ({
           MC
         </MemBtn>
         <MemBtn
-          onClick={() => memory.subtract(currentNumber)}
-          aria-label={t("memory.aria.subtract")}
+          onClick={handleStore}
+          aria-label={t("memory.aria.store")}
           disabled={isLocked}
         >
-          M−
-        </MemBtn>
-        <MemBtn
-          onClick={() => memory.add(currentNumber)}
-          aria-label={t("memory.aria.add")}
-          disabled={isLocked}
-        >
-          M+
+          MS
         </MemBtn>
         <MemBtn
           onClick={handleRecall}

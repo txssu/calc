@@ -31,13 +31,17 @@ const initialState = (): State => ({
   justEvaluated: false,
 });
 
-const compute = (a: number, b: number, op: Operator): number => {
-  switch (op) {
-    case "+": return a + b;
-    case "-": return a - b;
-    case "*": return a * b;
-    case "/": return b === 0 ? NaN : a / b;
-  }
+const lockedState = (): State => ({
+  current: LOCKED,
+  previous: null,
+  operator: null,
+  overwrite: false,
+  justEvaluated: true,
+});
+
+const buildExpression = (s: State): string | null => {
+  if (s.previous === null || s.operator === null) return null;
+  return `${formatNumber(s.previous)} ${OP_SYMBOL[s.operator]} ${s.current}`;
 };
 
 export type CalculatorOptions = {
@@ -71,6 +75,15 @@ export const useCalculator = (options: CalculatorOptions = {}): CalculatorApi =>
   lockedRef.current = isLocked;
   const optionsRef = useRef(options);
   optionsRef.current = options;
+
+  // The only path that "evaluates": redacts the display and locks the
+  // calculator. Intentionally never computes the result client-side — even
+  // with the paywall blocked, there is no arithmetic to inspect.
+  const triggerLock = useCallback((expression: string | null) => {
+    if (expression) optionsRef.current.onEvaluate?.(expression);
+    setState(lockedState());
+    setIsLocked(true);
+  }, []);
 
   const inputDigit = useCallback((d: string) => {
     setState((s) => {
@@ -107,54 +120,38 @@ export const useCalculator = (options: CalculatorOptions = {}): CalculatorApi =>
     });
   }, []);
 
-  const percent = useCallback(() => {
-    setState((s) => {
-      const n = parseFloat(s.current);
-      if (!Number.isFinite(n)) return s;
-      return { ...s, current: formatNumber(n / 100) };
-    });
-  }, []);
-
-  const setOperator = useCallback((op: Operator) => {
-    setState((s) => {
-      const currentNum = parseFloat(s.current);
+  const setOperator = useCallback(
+    (op: Operator) => {
+      const s = stateRef.current;
       if (s.previous !== null && s.operator && !s.overwrite) {
-        const result = compute(s.previous, currentNum, s.operator);
-        return {
-          ...s,
-          previous: result,
-          current: formatNumber(result),
-          operator: op,
-          overwrite: true,
-          justEvaluated: false,
-        };
+        // Chaining (e.g. 2 + 3 +) would need previous ⊕ current evaluated
+        // before queueing the new operator. That is the locked operation,
+        // so route it through triggerLock instead of computing.
+        triggerLock(buildExpression(s));
+        return;
       }
-      return {
-        ...s,
-        previous: currentNum,
+      setState((curr) => ({
+        ...curr,
+        previous: parseFloat(curr.current),
         operator: op,
         overwrite: true,
         justEvaluated: false,
-      };
-    });
-  }, []);
+      }));
+    },
+    [triggerLock],
+  );
 
   const equals = useCallback(() => {
     const s = stateRef.current;
     if (s.previous === null || s.operator === null) return;
+    triggerLock(buildExpression(s));
+  }, [triggerLock]);
 
-    const expression = `${formatNumber(s.previous)} ${OP_SYMBOL[s.operator]} ${s.current}`;
-    optionsRef.current.onEvaluate?.(expression);
-
-    setState({
-      current: LOCKED,
-      previous: null,
-      operator: null,
-      overwrite: false,
-      justEvaluated: true,
-    });
-    setIsLocked(true);
-  }, []);
+  // current / 100 is still arithmetic on a user-supplied operand; route it
+  // through the same lock so the result is never produced client-side.
+  const percent = useCallback(() => {
+    triggerLock(null);
+  }, [triggerLock]);
 
   const backspace = useCallback(() => {
     setState((s) => {

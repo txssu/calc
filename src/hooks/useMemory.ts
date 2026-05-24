@@ -19,8 +19,7 @@ const loadInitial = (): number | null => {
 export type MemoryApi = {
   value: number | null;
   isEmpty: boolean;
-  add: (n: number) => void;
-  subtract: (n: number) => void;
+  store: (n: number) => void;
   recall: () => number | null;
   clear: () => void;
 };
@@ -37,19 +36,17 @@ export const useMemory = (): MemoryApi => {
     }
   }, [value]);
 
-  const add = useCallback((n: number) => {
+  // Store replaces the slot — never accumulates. The old M+/M- variants were
+  // removed because (prev + n) is arithmetic on user-supplied operands, which
+  // is what the paywall is supposed to gate.
+  const store = useCallback((n: number) => {
     if (!Number.isFinite(n)) return;
-    setValue((prev) => (prev ?? 0) + n);
-  }, []);
-
-  const subtract = useCallback((n: number) => {
-    if (!Number.isFinite(n)) return;
-    setValue((prev) => (prev ?? 0) - n);
+    setValue(n);
   }, []);
 
   const recall = useCallback(() => value, [value]);
 
   const clear = useCallback(() => setValue(null), []);
 
-  return { value, isEmpty: value === null, add, subtract, recall, clear };
+  return { value, isEmpty: value === null, store, recall, clear };
 };
