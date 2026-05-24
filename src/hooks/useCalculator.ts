@@ -1,0 +1,205 @@
+// SPDX-FileCopyrightText: 2026 Eugene Fisher <z.ribin20@gmail.com>
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
+import { useCallback, useEffect, useRef, useState } from "react";
+import { DISPLAY_MAX_LEN, formatNumber } from "../lib/format.ts";
+
+export type Operator = "+" | "-" | "*" | "/";
+
+export const OP_SYMBOL: Record<Operator, string> = {
+  "+": "+",
+  "-": "−",
+  "*": "×",
+  "/": "÷",
+};
+
+const LOCKED = "•••";
+
+type State = {
+  current: string;
+  previous: number | null;
+  operator: Operator | null;
+  overwrite: boolean;
+  justEvaluated: boolean;
+};
+
+const initialState = (): State => ({
+  current: "0",
+  previous: null,
+  operator: null,
+  overwrite: false,
+  justEvaluated: false,
+});
+
+const compute = (a: number, b: number, op: Operator): number => {
+  switch (op) {
+    case "+": return a + b;
+    case "-": return a - b;
+    case "*": return a * b;
+    case "/": return b === 0 ? NaN : a / b;
+  }
+};
+
+export type CalculatorApi = {
+  display: string;
+  history: string;
+  armedOperator: Operator | null;
+  isLocked: boolean;
+  inputDigit: (d: string) => void;
+  inputDot: () => void;
+  setOperator: (op: Operator) => void;
+  equals: () => void;
+  clearAll: () => void;
+  toggleSign: () => void;
+  percent: () => void;
+  backspace: () => void;
+};
+
+export const useCalculator = (): CalculatorApi => {
+  const [state, setState] = useState<State>(initialState);
+  const [isLocked, setIsLocked] = useState(false);
+  const stateRef = useRef(state);
+  stateRef.current = state;
+  const lockedRef = useRef(isLocked);
+  lockedRef.current = isLocked;
+
+  const inputDigit = useCallback((d: string) => {
+    setState((s) => {
+      if (s.overwrite || s.justEvaluated) {
+        return { ...s, current: d, overwrite: false, justEvaluated: false };
+      }
+      if (s.current === "0") return { ...s, current: d };
+      if (s.current.replace(/[-.]/g, "").length < DISPLAY_MAX_LEN) {
+        return { ...s, current: s.current + d };
+      }
+      return s;
+    });
+  }, []);
+
+  const inputDot = useCallback(() => {
+    setState((s) => {
+      if (s.overwrite || s.justEvaluated) {
+        return { ...s, current: "0.", overwrite: false, justEvaluated: false };
+      }
+      if (s.current.includes(".")) return s;
+      return { ...s, current: s.current + "." };
+    });
+  }, []);
+
+  const clearAll = useCallback(() => setState(initialState()), []);
+
+  const toggleSign = useCallback(() => {
+    setState((s) => {
+      if (s.current === "0") return s;
+      return {
+        ...s,
+        current: s.current.startsWith("-") ? s.current.slice(1) : "-" + s.current,
+      };
+    });
+  }, []);
+
+  const percent = useCallback(() => {
+    setState((s) => {
+      const n = parseFloat(s.current);
+      if (!Number.isFinite(n)) return s;
+      return { ...s, current: formatNumber(n / 100) };
+    });
+  }, []);
+
+  const setOperator = useCallback((op: Operator) => {
+    setState((s) => {
+      const currentNum = parseFloat(s.current);
+      if (s.previous !== null && s.operator && !s.overwrite) {
+        const result = compute(s.previous, currentNum, s.operator);
+        return {
+          ...s,
+          previous: result,
+          current: formatNumber(result),
+          operator: op,
+          overwrite: true,
+          justEvaluated: false,
+        };
+      }
+      return {
+        ...s,
+        previous: currentNum,
+        operator: op,
+        overwrite: true,
+        justEvaluated: false,
+      };
+    });
+  }, []);
+
+  const equals = useCallback(() => {
+    setState((s) => {
+      if (s.previous === null || s.operator === null) return s;
+      return {
+        current: LOCKED,
+        previous: null,
+        operator: null,
+        overwrite: false,
+        justEvaluated: true,
+      };
+    });
+    setIsLocked(true);
+  }, []);
+
+  const backspace = useCallback(() => {
+    setState((s) => {
+      if (s.overwrite || s.justEvaluated) return initialState();
+      if (s.current.length > 1) {
+        const next = s.current.slice(0, -1);
+        return { ...s, current: next === "-" ? "0" : next };
+      }
+      return { ...s, current: "0" };
+    });
+  }, []);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (lockedRef.current) return;
+
+      if (/^[0-9]$/.test(e.key)) {
+        inputDigit(e.key);
+      } else if (e.key === ".") {
+        inputDot();
+      } else if (e.key === "+" || e.key === "-" || e.key === "*" || e.key === "/") {
+        setOperator(e.key);
+      } else if (e.key === "Enter" || e.key === "=") {
+        e.preventDefault();
+        equals();
+      } else if (e.key === "Backspace") {
+        backspace();
+      } else if (e.key.toLowerCase() === "c" || e.key === "Escape") {
+        clearAll();
+      } else if (e.key === "%") {
+        percent();
+      }
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [inputDigit, inputDot, setOperator, equals, backspace, clearAll, percent]);
+
+  const history =
+    state.previous !== null && state.operator
+      ? `${formatNumber(state.previous)} ${OP_SYMBOL[state.operator]}`
+      : "";
+
+  const armedOperator =
+    state.operator && state.overwrite ? state.operator : null;
+
+  return {
+    display: state.current,
+    history,
+    armedOperator,
+    isLocked,
+    inputDigit,
+    inputDot,
+    setOperator,
+    equals,
+    clearAll,
+    toggleSign,
+    percent,
+    backspace,
+  };
+};

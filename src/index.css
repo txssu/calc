@@ -1,0 +1,82 @@
+/* SPDX-FileCopyrightText: 2026 Eugene Fisher <z.ribin20@gmail.com> */
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+
+@import "tailwindcss";
+
+@theme {
+  --color-ink-950: #070708;
+  --color-ink-900: #0a0a0b;
+  --color-ink-800: #101012;
+  --color-ink-700: #16161a;
+  --color-ink-600: #1d1d22;
+
+  --color-accent: #06b6d4;
+  --color-accent-strong: #22d3ee;
+
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+
+  --shadow-monolith:
+    0 30px 80px -20px rgb(0 0 0 / 70%),
+    0 0 0 1px rgb(255 255 255 / 3%);
+  --shadow-accent-glow: 0 0 60px -15px rgb(6 182 212 / 50%);
+
+  --animate-card-in: card-in 300ms cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
+}
+
+@keyframes card-in {
+  from { transform: translateY(12px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+@layer components {
+  .key {
+    @apply h-14 rounded-lg border border-zinc-800/80 bg-ink-700
+           text-zinc-100 text-lg font-medium
+           transition-colors duration-100
+           hover:bg-ink-600 hover:border-zinc-700
+           active:bg-zinc-800 focus:outline-none focus-visible:ring-2
+           focus-visible:ring-accent focus-visible:ring-offset-2
+           focus-visible:ring-offset-ink-900 select-none;
+    font-variant-numeric: tabular-nums;
+  }
+  .key--ghost {
+    @apply bg-transparent text-zinc-400 text-sm font-normal
+           border-zinc-900 hover:bg-ink-800;
+  }
+  .key--op {
+    @apply bg-transparent text-accent border-zinc-800
+           font-mono text-xl hover:bg-accent/10 hover:border-accent/40;
+  }
+  .key--op.is-armed {
+    @apply bg-accent/10 border-accent/60 text-accent-strong;
+  }
+  .key--eq {
+    @apply bg-accent text-black border-accent font-mono
+           hover:bg-accent-strong hover:border-accent-strong;
+  }
+  .lang-btn {
+    @apply px-1.5 py-0.5 rounded text-zinc-600
+           hover:text-zinc-200 transition-colors
+           focus:outline-none focus-visible:ring-2
+           focus-visible:ring-accent focus-visible:ring-offset-2
+           focus-visible:ring-offset-ink-900;
+  }
+  .lang-btn.is-active {
+    @apply text-accent-strong;
+  }
+}
+
+body {
+  @apply min-h-screen bg-ink-900 text-zinc-100 font-sans antialiased
+         selection:bg-accent/30 selection:text-white;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
