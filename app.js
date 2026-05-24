@@ -4,9 +4,137 @@
 (() => {
   "use strict";
 
+  /* ====================== i18n ====================== */
+
+  const translations = {
+    en: {
+      "meta.title": "Calc",
+      "meta.description": "A minimal calculator with subscription plans.",
+      "aria.calculator": "Calculator",
+      "aria.keypad": "Keypad",
+      "aria.equals": "Equals",
+      "aria.switchEn": "Switch to English",
+      "aria.switchRu": "Switch to Russian",
+      "paywall.eyebrow": "Subscription required",
+      "paywall.title": "Subscribe to view your result",
+      "paywall.lede":
+        "Calc requires an active subscription. Choose a plan to continue.",
+      "plan.month": "/ month",
+      "plan.go.tag": "For individuals",
+      "plan.go.cta": "Choose Go",
+      "plan.go.f1": "Up to 1,000 calculations per month",
+      "plan.go.f2": "Standard arithmetic operations",
+      "plan.go.f3": "Calculation history",
+      "plan.go.f4": "Email support",
+      "plan.go.f5": "Single user",
+      "plan.ultra.ribbon": "Recommended",
+      "plan.ultra.tag": "For teams and power users",
+      "plan.ultra.cta": "Choose Ultra",
+      "plan.ultra.f1": "Unlimited calculations",
+      "plan.ultra.f2": "High-precision and scientific operations",
+      "plan.ultra.f3": "Priority support, 24/7",
+      "plan.ultra.f4": "Team workspaces, up to 25 seats",
+      "plan.ultra.f5": "SSO, SCIM, audit logs",
+      "plan.ultra.f6": "SOC 2 Type II compliance",
+      "toast.checkout": "Payment processor is temporarily unavailable.",
+    },
+    ru: {
+      "meta.title": "Calc",
+      "meta.description":
+        "Минималистичный калькулятор с тарифной подпиской.",
+      "aria.calculator": "Калькулятор",
+      "aria.keypad": "Клавиатура",
+      "aria.equals": "Равно",
+      "aria.switchEn": "Переключить на английский",
+      "aria.switchRu": "Переключить на русский",
+      "paywall.eyebrow": "Требуется подписка",
+      "paywall.title": "Подпишитесь, чтобы увидеть результат",
+      "paywall.lede":
+        "Calc требует активной подписки. Выберите тариф, чтобы продолжить.",
+      "plan.month": "/ мес",
+      "plan.go.tag": "Для частных пользователей",
+      "plan.go.cta": "Выбрать Go",
+      "plan.go.f1": "До 1 000 вычислений в месяц",
+      "plan.go.f2": "Стандартные арифметические операции",
+      "plan.go.f3": "История вычислений",
+      "plan.go.f4": "Поддержка по электронной почте",
+      "plan.go.f5": "Один пользователь",
+      "plan.ultra.ribbon": "Рекомендуем",
+      "plan.ultra.tag": "Для команд и продвинутых пользователей",
+      "plan.ultra.cta": "Выбрать Ultra",
+      "plan.ultra.f1": "Безлимитные вычисления",
+      "plan.ultra.f2": "Высокоточные и научные операции",
+      "plan.ultra.f3": "Приоритетная поддержка 24/7",
+      "plan.ultra.f4": "Командные рабочие пространства, до 25 пользователей",
+      "plan.ultra.f5": "SSO, SCIM, журналы аудита",
+      "plan.ultra.f6": "Соответствие SOC 2 Type II",
+      "toast.checkout": "Платёжный процессор временно недоступен.",
+    },
+  };
+
+  const LANG_STORAGE_KEY = "calc.lang";
+  const SUPPORTED = ["en", "ru"];
+
+  const detectLang = () => {
+    try {
+      const stored = localStorage.getItem(LANG_STORAGE_KEY);
+      if (SUPPORTED.includes(stored)) return stored;
+    } catch (_) {
+      /* localStorage unavailable */
+    }
+    const candidates = navigator.languages && navigator.languages.length
+      ? navigator.languages
+      : [navigator.language || "en"];
+    for (const c of candidates) {
+      const base = String(c).toLowerCase().split("-")[0];
+      if (SUPPORTED.includes(base)) return base;
+    }
+    return "en";
+  };
+
+  let currentLang = detectLang();
+
+  const t = (key) => {
+    const dict = translations[currentLang] || translations.en;
+    return dict[key] !== undefined ? dict[key] : translations.en[key] || key;
+  };
+
+  const applyLang = (lang) => {
+    if (!SUPPORTED.includes(lang)) lang = "en";
+    currentLang = lang;
+    try {
+      localStorage.setItem(LANG_STORAGE_KEY, lang);
+    } catch (_) {
+      /* ignore */
+    }
+
+    document.documentElement.lang = lang;
+    document.title = t("meta.title");
+    const meta = document.querySelector('meta[name="description"]');
+    if (meta) meta.setAttribute("content", t("meta.description"));
+
+    document.querySelectorAll("[data-i18n]").forEach((el) => {
+      el.textContent = t(el.dataset.i18n);
+    });
+    document.querySelectorAll("[data-i18n-aria-label]").forEach((el) => {
+      el.setAttribute("aria-label", t(el.dataset.i18nAriaLabel));
+    });
+
+    document.querySelectorAll(".lang-btn").forEach((btn) => {
+      btn.classList.toggle("is-active", btn.dataset.lang === lang);
+      btn.setAttribute("aria-pressed", btn.dataset.lang === lang ? "true" : "false");
+    });
+  };
+
+  document.querySelectorAll(".lang-btn").forEach((btn) => {
+    btn.addEventListener("click", () => applyLang(btn.dataset.lang));
+  });
+
+  /* ====================== Calculator ====================== */
+
   const display = document.getElementById("display");
   const history = document.getElementById("history");
-  const keys = document.querySelector('[role="group"][aria-label="Keypad"]');
+  const keys = document.getElementById("keypad");
   const paywall = document.getElementById("paywall");
 
   const state = {
@@ -197,7 +325,7 @@
   paywall.addEventListener("click", (e) => {
     const target = e.target.closest("[data-plan]");
     if (!target) return;
-    toast("Payment processor is temporarily unavailable.");
+    toast(t("toast.checkout"));
   });
 
   document.addEventListener("keydown", (e) => {
@@ -236,5 +364,6 @@
     }
   });
 
+  applyLang(currentLang);
   render();
 })();
