@@ -126,11 +126,17 @@
     state.justEvaluated = false;
   };
 
+  const scramble = (s) =>
+    s.replace(/\d/g, (d) => {
+      const shift = 1 + Math.floor(Math.random() * 9);
+      return String((Number(d) + shift) % 10);
+    });
+
   const equals = () => {
     if (state.previous === null || state.operator === null) return;
     const b = parseFloat(state.current);
     const result = compute(state.previous, b, state.operator);
-    state.current = format(result);
+    state.current = scramble(format(result));
     state.previous = null;
     state.operator = null;
     state.overwrite = false;
