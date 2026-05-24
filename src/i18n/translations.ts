@@ -16,6 +16,7 @@ const en = {
   "paywall.title": "Subscribe to view your result",
   "paywall.lede":
     "Calc requires an active subscription. Choose a plan to continue.",
+  "paywall.toggleAria": "Select a plan",
   "plan.month": "/ month",
   "plan.go.tag": "For individuals",
   "plan.go.cta": "Choose Go",
@@ -81,6 +82,7 @@ const ru: Record<TranslationKey, string> = {
   "paywall.title": "Подпишитесь, чтобы увидеть результат",
   "paywall.lede":
     "Calc требует активной подписки. Выберите тариф, чтобы продолжить.",
+  "paywall.toggleAria": "Выберите тариф",
   "plan.month": "/ мес",
   "plan.go.tag": "Для частных пользователей",
   "plan.go.cta": "Выбрать Go",

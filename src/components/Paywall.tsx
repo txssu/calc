@@ -1,10 +1,13 @@
 // SPDX-FileCopyrightText: 2026 Eugene Fisher <z.ribin20@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "../i18n/LanguageProvider.tsx";
 import type { TranslationKey } from "../i18n/translations.ts";
+import { useMediaQuery } from "../hooks/useMediaQuery.ts";
 import { useToast } from "./ToastHost.tsx";
+
+type Plan = "go" | "ultra";
 
 const GO_FEATURES: TranslationKey[] = [
   "plan.go.f1",
@@ -28,16 +31,27 @@ export const Paywall = () => {
   const { toast } = useToast();
   const firstCtaRef = useRef<HTMLButtonElement | null>(null);
 
+  const isDesktop = useMediaQuery("(min-width: 640px)");
+  const [selected, setSelected] = useState<Plan>("ultra");
+
   useEffect(() => {
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    firstCtaRef.current?.focus({ preventScroll: true });
     return () => {
       document.body.style.overflow = prevOverflow;
     };
   }, []);
 
+  // Focus the highlighted plan's CTA on mount and whenever the viewport
+  // crosses the sm breakpoint (which swaps which card the ref attaches to).
+  useEffect(() => {
+    firstCtaRef.current?.focus({ preventScroll: true });
+  }, [isDesktop]);
+
   const onChoose = () => toast(t("toast.checkout"));
+
+  const showGo = isDesktop || selected === "go";
+  const showUltra = isDesktop || selected === "ultra";
 
   return (
     <div
@@ -51,9 +65,9 @@ export const Paywall = () => {
       <article
         className="relative w-full max-w-3xl max-h-[calc(100vh-2rem)] overflow-y-auto
                    rounded-2xl bg-ink-800 border border-zinc-800
-                   p-8 sm:p-10 shadow-monolith animate-card-in"
+                   p-6 sm:p-10 shadow-monolith animate-card-in"
       >
-        <header className="text-center max-w-xl mx-auto mb-8">
+        <header className="text-center max-w-xl mx-auto mb-6 sm:mb-8">
           <span
             className="inline-block px-2.5 py-1 mb-4 rounded-full
                        bg-accent/10 border border-accent/30
@@ -63,7 +77,7 @@ export const Paywall = () => {
           </span>
           <h2
             id="paywall-title"
-            className="text-3xl sm:text-4xl font-semibold tracking-tight text-zinc-100 mb-3"
+            className="text-2xl sm:text-4xl font-semibold tracking-tight text-zinc-100 mb-3"
           >
             {t("paywall.title")}
           </h2>
@@ -72,31 +86,105 @@ export const Paywall = () => {
           </p>
         </header>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <PlanCard
-            name="Go"
-            price="$20"
-            tagKey="plan.go.tag"
-            features={GO_FEATURES}
-            ctaKey="plan.go.cta"
-            onChoose={onChoose}
-            firstCtaRef={firstCtaRef}
-          />
-          <PlanCard
-            name="Ultra"
-            price="$200"
-            tagKey="plan.ultra.tag"
-            features={ULTRA_FEATURES}
-            ctaKey="plan.ultra.cta"
-            ribbonKey="plan.ultra.ribbon"
-            highlight
-            onChoose={onChoose}
-          />
+        <PlanToggle
+          selected={selected}
+          onSelect={setSelected}
+          ariaLabel={t("paywall.toggleAria")}
+        />
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-5 sm:mt-0">
+          {showGo && (
+            <PlanCard
+              name="Go"
+              price="$20"
+              tagKey="plan.go.tag"
+              features={GO_FEATURES}
+              ctaKey="plan.go.cta"
+              onChoose={onChoose}
+              firstCtaRef={!isDesktop && selected === "go" ? firstCtaRef : undefined}
+            />
+          )}
+          {showUltra && (
+            <PlanCard
+              name="Ultra"
+              price="$200"
+              tagKey="plan.ultra.tag"
+              features={ULTRA_FEATURES}
+              ctaKey="plan.ultra.cta"
+              ribbonKey="plan.ultra.ribbon"
+              highlight
+              onChoose={onChoose}
+              firstCtaRef={
+                isDesktop || selected === "ultra" ? firstCtaRef : undefined
+              }
+            />
+          )}
         </div>
       </article>
     </div>
   );
 };
+
+type ToggleProps = {
+  selected: Plan;
+  onSelect: (p: Plan) => void;
+  ariaLabel: string;
+};
+
+const PlanToggle = ({ selected, onSelect, ariaLabel }: ToggleProps) => (
+  <div
+    role="tablist"
+    aria-label={ariaLabel}
+    className="sm:hidden grid grid-cols-2 gap-1 p-1
+               rounded-lg bg-ink-700 border border-zinc-800
+               max-w-[240px] mx-auto"
+  >
+    <ToggleButton
+      label="Go"
+      isActive={selected === "go"}
+      onClick={() => onSelect("go")}
+      activeClass="bg-zinc-100 text-black"
+    />
+    <ToggleButton
+      label="Ultra"
+      isActive={selected === "ultra"}
+      onClick={() => onSelect("ultra")}
+      activeClass="bg-accent text-black"
+    />
+  </div>
+);
+
+type ToggleButtonProps = {
+  label: string;
+  isActive: boolean;
+  onClick: () => void;
+  activeClass: string;
+};
+
+const ToggleButton = ({
+  label,
+  isActive,
+  onClick,
+  activeClass,
+}: ToggleButtonProps) => (
+  <button
+    type="button"
+    role="tab"
+    aria-selected={isActive}
+    onClick={onClick}
+    className={
+      "px-3 py-3 rounded-md text-xs font-mono uppercase " +
+      "tracking-[0.12em] transition-colors " +
+      "focus:outline-none focus-visible:ring-2 focus-visible:ring-accent " +
+      "focus-visible:ring-offset-2 focus-visible:ring-offset-ink-700 " +
+      (isActive
+        ? `${activeClass} font-semibold`
+        : "text-zinc-500 hover:text-zinc-200")
+    }
+  >
+    {label}
+  </button>
+);
 
 type PlanCardProps = {
   name: string;
