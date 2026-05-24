@@ -1,13 +1,47 @@
 // SPDX-FileCopyrightText: 2026 Eugene Fisher <z.ribin20@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Calculator } from "./components/Calculator.tsx";
+import { HistoryPanel } from "./components/HistoryPanel.tsx";
 import { LanguageSwitcher } from "./components/LanguageSwitcher.tsx";
 import { Paywall } from "./components/Paywall.tsx";
+import { ShortcutsOverlay } from "./components/ShortcutsOverlay.tsx";
+import { useToast } from "./components/ToastHost.tsx";
 import { useCalculator } from "./hooks/useCalculator.ts";
+import { useHistory } from "./hooks/useHistory.ts";
+import { useMemory } from "./hooks/useMemory.ts";
+import { useTranslation } from "./i18n/LanguageProvider.tsx";
 
 const App = () => {
-  const calc = useCalculator();
+  const { t } = useTranslation();
+  const { toast } = useToast();
+  const history = useHistory();
+  const memory = useMemory();
+
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const shortcutsRef = useRef(shortcutsOpen);
+  shortcutsRef.current = shortcutsOpen;
+
+  const onEvaluate = useCallback(
+    (expression: string) => history.add(expression),
+    [history],
+  );
+
+  const isInputBlocked = useCallback(() => shortcutsRef.current, []);
+
+  const calc = useCalculator({ onEvaluate, isInputBlocked });
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "?" && !calc.isLocked && !shortcutsRef.current) {
+        e.preventDefault();
+        setShortcutsOpen(true);
+      }
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [calc.isLocked]);
 
   return (
     <>
@@ -19,7 +53,7 @@ const App = () => {
 
       <LanguageSwitcher />
 
-      <main className="min-h-screen flex flex-col items-center px-6 py-12 gap-10">
+      <main className="min-h-screen flex flex-col items-center px-6 py-12 gap-6 sm:gap-8">
         <header className="flex items-center gap-3 text-sm">
           <span className="font-mono text-accent">[</span>
           <span className="font-mono tracking-tight text-zinc-100">calc</span>
@@ -30,12 +64,30 @@ const App = () => {
           >
             v1.0.0
           </span>
+          <button
+            type="button"
+            onClick={() => setShortcutsOpen(true)}
+            aria-label={t("shortcuts.toggle")}
+            className="ml-1 w-6 h-6 rounded-full border border-zinc-800
+                       text-zinc-500 text-[11px] font-mono leading-none
+                       hover:text-zinc-100 hover:border-zinc-700
+                       transition-colors
+                       focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          >
+            ?
+          </button>
         </header>
 
-        <Calculator calc={calc} />
+        <div className="w-full flex flex-col items-center gap-4">
+          <Calculator calc={calc} memory={memory} onToast={toast} />
+          <HistoryPanel history={history} />
+        </div>
       </main>
 
       {calc.isLocked && <Paywall />}
+      {shortcutsOpen && (
+        <ShortcutsOverlay onClose={() => setShortcutsOpen(false)} />
+      )}
     </>
   );
 };

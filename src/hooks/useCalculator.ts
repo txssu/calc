@@ -40,11 +40,17 @@ const compute = (a: number, b: number, op: Operator): number => {
   }
 };
 
+export type CalculatorOptions = {
+  onEvaluate?: (expression: string) => void;
+  isInputBlocked?: () => boolean;
+};
+
 export type CalculatorApi = {
   display: string;
   history: string;
   armedOperator: Operator | null;
   isLocked: boolean;
+  currentNumber: number;
   inputDigit: (d: string) => void;
   inputDot: () => void;
   setOperator: (op: Operator) => void;
@@ -53,15 +59,18 @@ export type CalculatorApi = {
   toggleSign: () => void;
   percent: () => void;
   backspace: () => void;
+  loadValue: (n: number) => void;
 };
 
-export const useCalculator = (): CalculatorApi => {
+export const useCalculator = (options: CalculatorOptions = {}): CalculatorApi => {
   const [state, setState] = useState<State>(initialState);
   const [isLocked, setIsLocked] = useState(false);
   const stateRef = useRef(state);
   stateRef.current = state;
   const lockedRef = useRef(isLocked);
   lockedRef.current = isLocked;
+  const optionsRef = useRef(options);
+  optionsRef.current = options;
 
   const inputDigit = useCallback((d: string) => {
     setState((s) => {
@@ -131,15 +140,18 @@ export const useCalculator = (): CalculatorApi => {
   }, []);
 
   const equals = useCallback(() => {
-    setState((s) => {
-      if (s.previous === null || s.operator === null) return s;
-      return {
-        current: LOCKED,
-        previous: null,
-        operator: null,
-        overwrite: false,
-        justEvaluated: true,
-      };
+    const s = stateRef.current;
+    if (s.previous === null || s.operator === null) return;
+
+    const expression = `${formatNumber(s.previous)} ${OP_SYMBOL[s.operator]} ${s.current}`;
+    optionsRef.current.onEvaluate?.(expression);
+
+    setState({
+      current: LOCKED,
+      previous: null,
+      operator: null,
+      overwrite: false,
+      justEvaluated: true,
     });
     setIsLocked(true);
   }, []);
@@ -155,9 +167,20 @@ export const useCalculator = (): CalculatorApi => {
     });
   }, []);
 
+  const loadValue = useCallback((n: number) => {
+    if (!Number.isFinite(n)) return;
+    setState((s) => ({
+      ...s,
+      current: formatNumber(n),
+      overwrite: true,
+      justEvaluated: false,
+    }));
+  }, []);
+
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (lockedRef.current) return;
+      if (optionsRef.current.isInputBlocked?.()) return;
 
       if (/^[0-9]$/.test(e.key)) {
         inputDigit(e.key);
@@ -188,11 +211,14 @@ export const useCalculator = (): CalculatorApi => {
   const armedOperator =
     state.operator && state.overwrite ? state.operator : null;
 
+  const currentNumber = parseFloat(state.current);
+
   return {
     display: state.current,
     history,
     armedOperator,
     isLocked,
+    currentNumber: Number.isFinite(currentNumber) ? currentNumber : 0,
     inputDigit,
     inputDot,
     setOperator,
@@ -201,5 +227,6 @@ export const useCalculator = (): CalculatorApi => {
     toggleSign,
     percent,
     backspace,
+    loadValue,
   };
 };
